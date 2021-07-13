@@ -1,0 +1,40 @@
+name: vHive self-hosted KinD
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  vhive-self-hosted-kind:
+    name: vHive self-hosted KinD
+    runs-on: [self-hosted-kind]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: vhive
+          lfs: true
+
+      - name: Up chained-function-eventing
+        run: |
+          set -x
+
+          ./vhive/function-images/tests/chained-function-eventing/manifests/apply.sh
+      
+      - name: Invoke
+        run: |
+          set -x
+
+          ./vhive/bin/grpcurl -d '{ "name": "Bora", "vHiveMetadata": "eyAiV29ya2Zsb3dJZCI6ICJXRklEIiwgIkludm9jYXRpb25JZCI6ICJJVklEIiwgIkludm9rZWRPbiI6ICIyMDIxLTA3LTEzVDA5OjM4OjE3Ljc5OTI3NzE0Mi0wNDowMCIgfQ==" }' -plaintext $(kubectl -n chained-functions-eventing get ksvc producer -o jsonpath='{.status.url}' | cut -c8-):80 helloworld.Greeter.SayHello

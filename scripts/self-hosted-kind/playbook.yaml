@@ -1,0 +1,64 @@
+---
+- name: Setup Self-Hosted KinD Runner
+  hosts: all
+  tasks:
+    - name: Add git PPA
+      ansible.builtin.apt_repository:
+        repo: ppa:git-core/ppa
+
+    - name: Upgrade Packages
+      become: yes
+      apt:
+        update_cache: yes
+        upgrade: safe
+
+    - name: Install Required Packages
+      become: yes
+      apt:
+        name:
+          - docker.io
+          - git-lfs
+
+    - name: Add user "{{ ansible_user }}" to group docker
+      become: yes  
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Reset SSH connection to activate changes
+      meta: reset_connection
+
+    - name: Download and Install kind
+      become: yes
+      get_url:
+        url: https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
+        dest: /usr/local/bin/kind
+        mode: 0755
+        owner: root
+
+    - name: Download and Install kubectl
+      become: yes
+      get_url:
+        url: https://dl.k8s.io/release/v1.21.2/bin/linux/amd64/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: 0755
+        owner: root
+      
+    - name: Download and Install Go
+      become: yes
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: https://golang.org/dl/go1.16.6.linux-amd64.tar.gz
+        dest: /usr/local
+
+    - name: Download knative-kind installation script
+      get_url:
+        url: https://raw.githubusercontent.com/csantanapr/knative-kind/master/install.sh
+        dest: /tmp/knative-kind-install.sh
+
+    - name: Install knative-kind
+      command: bash /tmp/knative-kind-install.sh
+
+# Execute this playbook using 
+#   ansible-playbook -u <YOUR SSH USERNAME> -i <HOSTNAME>, playbook.yaml
